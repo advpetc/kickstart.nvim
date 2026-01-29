@@ -133,6 +133,8 @@ return {
             server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
             require('lspconfig')[server_name].setup(server)
           end,
+          -- Skip jdtls here - it's configured separately in java.lua
+          jdtls = function() end,
         },
       }
     end,
