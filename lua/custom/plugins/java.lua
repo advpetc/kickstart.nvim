@@ -1,10 +1,10 @@
 -- Java-specific configuration (jdtls)
+-- This sets up jdtls manually without using lspconfig's jdtls module
 return {
   {
-    'neovim/nvim-lspconfig',
+    'mfussenegger/nvim-jdtls',
     ft = { 'java' },
     dependencies = {
-      'neovim/nvim-lspconfig',
       'saghen/blink.cmp',
     },
     config = function()
@@ -16,16 +16,8 @@ return {
           local jdtls_path = vim.fn.stdpath 'data' .. '/mason/packages/jdtls'
 
           -- Find project root for consistent workspace (better caching)
-          local root_dir = require('lspconfig.util').root_pattern(
-            '.git',
-            'pom.xml',
-            'build.gradle',
-            'build.gradle.kts',
-            'settings.gradle',
-            'settings.gradle.kts',
-            'mvnw',
-            'gradlew'
-          )(vim.api.nvim_buf_get_name(0)) or vim.fn.getcwd()
+          local root_markers = { '.git', 'pom.xml', 'build.gradle', 'build.gradle.kts', 'settings.gradle', 'settings.gradle.kts', 'mvnw', 'gradlew' }
+          local root_dir = vim.fs.dirname(vim.fs.find(root_markers, { upward = true })[1]) or vim.fn.getcwd()
 
           -- Use project root name for workspace (consistent across subdirs)
           local project_name = vim.fn.fnamemodify(root_dir, ':t')
@@ -88,7 +80,7 @@ return {
             },
           }
 
-          vim.lsp.start(config)
+          require('jdtls').start_or_attach(config)
         end,
       })
     end,
