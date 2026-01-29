@@ -406,11 +406,20 @@ require('lazy').setup({
         -- You can put your default mappings / updates / etc. in here
         --  All the info you're looking for is in `:help telescope.setup()`
         --
-        -- defaults = {
-        --   mappings = {
-        --     i = { ['<c-enter>'] = 'to_fuzzy_refine' },
-        --   },
-        -- },
+        defaults = {
+          path_display = function(opts, path)
+            -- Get the filename
+            local tail = require('telescope.utils').path_tail(path)
+            -- Get the directory path
+            local dir = vim.fn.fnamemodify(path, ':h')
+            -- Abbreviate each directory to first letter
+            local abbreviated = dir:gsub('([^/])[^/]*/', '%1/')
+            return string.format('%s/%s', abbreviated, tail)
+          end,
+          mappings = {
+            i = { ['<c-enter>'] = 'to_fuzzy_refine' },
+          },
+        },
         -- pickers = {}
         extensions = {
           ['ui-select'] = {
