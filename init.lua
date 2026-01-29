@@ -779,7 +779,7 @@ require('lazy').setup({
               '-Declipse.product=org.eclipse.jdt.ls.core.product',
               '-Dlog.protocol=true',
               '-Dlog.level=ALL',
-              '-Xmx4g',
+              '-Xmx16g',
               '--add-modules=ALL-SYSTEM',
               '--add-opens',
               'java.base/java.util=ALL-UNNAMED',
