@@ -1,11 +1,8 @@
 -- Java (jdtls) Configuration
--- This sets up jdtls manually without using lspconfig's jdtls config
+-- Standalone setup without nvim-lspconfig's jdtls module
 return {
-  'mfussenegger/nvim-jdtls',
+  'saghen/blink.cmp',  -- Just need this for capabilities
   ft = { 'java' },
-  dependencies = {
-    'saghen/blink.cmp',
-  },
   config = function()
     local capabilities = require('blink.cmp').get_lsp_capabilities()
 
@@ -29,6 +26,7 @@ return {
         end
 
         local config = {
+          name = 'jdtls',
           cmd = {
             'java',
             '-Declipse.application=org.eclipse.jdt.ls.core.id1',
@@ -70,26 +68,20 @@ return {
           },
         }
 
-        require('jdtls').start_or_attach(config)
+        vim.lsp.start(config)
       end,
     })
 
     -- Command and keymap to clear jdtls cache and re-index
     vim.api.nvim_create_user_command('JdtlsClearCache', function()
-      -- Find project root
       local root_markers = { '.git', 'pom.xml', 'build.gradle', 'build.gradle.kts', 'settings.gradle', 'settings.gradle.kts', 'mvnw', 'gradlew' }
       local root_dir = vim.fs.dirname(vim.fs.find(root_markers, { upward = true })[1]) or vim.fn.getcwd()
       local project_name = vim.fn.fnamemodify(root_dir, ':t')
       local workspace_dir = vim.fn.stdpath 'data' .. '/jdtls-workspace/' .. project_name
 
-      -- Stop jdtls
       vim.lsp.stop_client(vim.lsp.get_clients({ name = 'jdtls' }))
-
-      -- Delete workspace
       vim.fn.delete(workspace_dir, 'rf')
       vim.notify('Cleared jdtls cache: ' .. workspace_dir, vim.log.levels.INFO)
-
-      -- Restart by re-editing the file
       vim.cmd('edit')
     end, {})
 
