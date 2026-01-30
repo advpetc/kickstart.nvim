@@ -65,6 +65,15 @@ return {
                 maven = { enabled = true },
               },
               autobuild = { enabled = true },
+              configuration = {
+                runtimes = {
+                  {
+                    name = 'JavaSE-21',
+                    path = '/Library/Java/JavaVirtualMachines/jdk21.0.6-msft.jdk/Contents/Home',
+                    default = true,
+                  },
+                },
+              },
             },
           },
           capabilities = capabilities,
