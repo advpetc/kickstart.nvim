@@ -60,6 +60,16 @@ return {
                   staticStarThreshold = 9999,
                 },
               },
+              import = {
+                gradle = {
+                  enabled = true,
+                  wrapper = { enabled = true },
+                  offline = { enabled = false },
+                },
+              },
+              configuration = {
+                updateBuildConfiguration = 'automatic',
+              },
             },
           },
           capabilities = capabilities,
