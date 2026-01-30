@@ -64,12 +64,11 @@ return {
                 gradle = {
                   enabled = true,
                   wrapper = { enabled = true },
-                  offline = { enabled = false },
+                  home = vim.fn.expand('~/.gradle'),
+                  java = { home = '/Library/Java/JavaVirtualMachines/jdk21.0.6-msft.jdk/Contents/Home' },
                 },
               },
-              configuration = {
-                updateBuildConfiguration = 'automatic',
-              },
+              autobuild = { enabled = true },
             },
           },
           capabilities = capabilities,
