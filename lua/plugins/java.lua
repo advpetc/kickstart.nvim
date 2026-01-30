@@ -61,14 +61,10 @@ return {
                 },
               },
               import = {
-                gradle = {
-                  enabled = true,
-                  wrapper = { enabled = true },
-                  home = vim.fn.expand('~/.gradle'),
-                  java = { home = '/Library/Java/JavaVirtualMachines/jdk21.0.6-msft.jdk/Contents/Home' },
-                },
+                gradle = { enabled = false },
+                maven = { enabled = true },
               },
-              autobuild = { enabled = true },
+              autobuild = { enabled = false },
             },
           },
           capabilities = capabilities,
