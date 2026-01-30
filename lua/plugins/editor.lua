@@ -6,6 +6,18 @@ return {
   -- Git integration with vim-fugitive
   'tpope/vim-fugitive',
 
+  -- Inline git blame (updates automatically)
+  {
+    'f-person/git-blame.nvim',
+    event = 'VeryLazy',
+    opts = {
+      enabled = true,
+      date_format = '%Y-%m-%d',
+      message_when_not_committed = 'Not committed yet',
+      virtual_text_column = 80,
+    },
+  },
+
   -- Which-key for keybinding hints
   {
     'folke/which-key.nvim',
