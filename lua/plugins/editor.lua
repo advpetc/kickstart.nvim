@@ -64,6 +64,16 @@ return {
       statusline.section_location = function()
         return '%2l:%-2v'
       end
+      -- Abbreviated path display (e.g., s/m/j/c/l/t/File.java)
+      statusline.section_filename = function()
+        local path = vim.fn.expand('%:~:.')
+        if path == '' then return '[No Name]' end
+        local filename = vim.fn.fnamemodify(path, ':t')
+        local dir = vim.fn.fnamemodify(path, ':h')
+        if dir == '.' then return filename end
+        local abbreviated = dir:gsub('([^/])[^/]*/', '%1/')
+        return abbreviated .. '/' .. filename
+      end
     end,
   },
 
