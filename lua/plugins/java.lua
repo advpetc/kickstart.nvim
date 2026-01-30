@@ -64,7 +64,7 @@ return {
                 gradle = { enabled = false },
                 maven = { enabled = true },
               },
-              autobuild = { enabled = false },
+              autobuild = { enabled = true },
             },
           },
           capabilities = capabilities,
