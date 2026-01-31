@@ -69,21 +69,11 @@ return {
             local mode, mode_hl = MiniStatusline.section_mode({ trunc_width = 120 })
             local git = MiniStatusline.section_git({ trunc_width = 75 })
             local diagnostics = MiniStatusline.section_diagnostics({ trunc_width = 75 })
-            local fileinfo = MiniStatusline.section_fileinfo({ trunc_width = 120 })
             local location = '%2l:%-2v'
 
-            -- Abbreviated filename
-            local path = vim.fn.expand('%:~:.')
-            local filename = '[No Name]'
-            if path ~= '' then
-              local name = vim.fn.fnamemodify(path, ':t')
-              local dir = vim.fn.fnamemodify(path, ':h')
-              if dir == '.' then
-                filename = name
-              else
-                filename = dir:gsub('([^/])[^/]*/', '%1/') .. '/' .. name
-              end
-            end
+            -- Just filename without path
+            local filename = vim.fn.expand('%:t')
+            if filename == '' then filename = '[No Name]' end
 
             -- Get navic context (current method/class)
             local navic = require('nvim-navic')
@@ -92,6 +82,10 @@ return {
               context = navic.get_location()
             end
 
+            -- File type and encoding (without path)
+            local filetype = vim.bo.filetype
+            local encoding = vim.bo.fileencoding or vim.o.encoding
+
             return MiniStatusline.combine_groups({
               { hl = mode_hl, strings = { mode } },
               { hl = 'MiniStatuslineDevinfo', strings = { git, diagnostics } },
@@ -99,7 +93,7 @@ return {
               { hl = 'MiniStatuslineFilename', strings = { filename } },
               '%=',
               { hl = 'MiniStatuslineFileinfo', strings = { context } },
-              { hl = 'MiniStatuslineFileinfo', strings = { fileinfo } },
+              { hl = 'MiniStatuslineFileinfo', strings = { filetype, encoding } },
               { hl = mode_hl, strings = { location } },
             })
           end,
