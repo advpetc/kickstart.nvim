@@ -41,28 +41,70 @@ return {
     opts = { signs = false },
   },
 
+  -- Code context (shows current class/method in statusline)
+  {
+    'SmiteshP/nvim-navic',
+    dependencies = { 'neovim/nvim-lspconfig' },
+    opts = {
+      lsp = { auto_attach = true },
+      highlight = true,
+      separator = ' > ',
+      depth_limit = 3,
+    },
+  },
+
   -- Mini.nvim collection
   {
     'echasnovski/mini.nvim',
+    dependencies = { 'SmiteshP/nvim-navic' },
     config = function()
       require('mini.ai').setup { n_lines = 500 }
       require('mini.surround').setup()
 
       local statusline = require 'mini.statusline'
-      statusline.setup { use_icons = vim.g.have_nerd_font }
-      statusline.section_location = function()
-        return '%2l:%-2v'
-      end
-      -- Abbreviated path display (e.g., s/m/j/c/l/t/File.java)
-      statusline.section_filename = function()
-        local path = vim.fn.expand('%:~:.')
-        if path == '' then return '[No Name]' end
-        local filename = vim.fn.fnamemodify(path, ':t')
-        local dir = vim.fn.fnamemodify(path, ':h')
-        if dir == '.' then return filename end
-        local abbreviated = dir:gsub('([^/])[^/]*/', '%1/')
-        return abbreviated .. '/' .. filename
-      end
+      statusline.setup {
+        use_icons = vim.g.have_nerd_font,
+        content = {
+          active = function()
+            local mode, mode_hl = MiniStatusline.section_mode({ trunc_width = 120 })
+            local git = MiniStatusline.section_git({ trunc_width = 75 })
+            local diagnostics = MiniStatusline.section_diagnostics({ trunc_width = 75 })
+            local fileinfo = MiniStatusline.section_fileinfo({ trunc_width = 120 })
+            local location = '%2l:%-2v'
+
+            -- Abbreviated filename
+            local path = vim.fn.expand('%:~:.')
+            local filename = '[No Name]'
+            if path ~= '' then
+              local name = vim.fn.fnamemodify(path, ':t')
+              local dir = vim.fn.fnamemodify(path, ':h')
+              if dir == '.' then
+                filename = name
+              else
+                filename = dir:gsub('([^/])[^/]*/', '%1/') .. '/' .. name
+              end
+            end
+
+            -- Get navic context (current method/class)
+            local navic = require('nvim-navic')
+            local context = ''
+            if navic.is_available() then
+              context = navic.get_location()
+            end
+
+            return MiniStatusline.combine_groups({
+              { hl = mode_hl, strings = { mode } },
+              { hl = 'MiniStatuslineDevinfo', strings = { git, diagnostics } },
+              '%<',
+              { hl = 'MiniStatuslineFilename', strings = { filename } },
+              '%=',
+              { hl = 'MiniStatuslineFileinfo', strings = { context } },
+              { hl = 'MiniStatuslineFileinfo', strings = { fileinfo } },
+              { hl = mode_hl, strings = { location } },
+            })
+          end,
+        },
+      }
     end,
   },
 
