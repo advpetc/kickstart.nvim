@@ -95,6 +95,59 @@ vim.api.nvim_create_autocmd('TextYankPost', {
   end,
 })
 
+-- [[ Native Session Management ]]
+-- Session options: what to save
+vim.o.sessionoptions = 'buffers,curdir,folds,help,tabpages,winsize'
+
+-- Session file path based on current directory
+local function get_session_file()
+  local cwd = vim.fn.getcwd()
+  local session_dir = vim.fn.stdpath('state') .. '/sessions'
+  vim.fn.mkdir(session_dir, 'p')
+  local session_name = cwd:gsub('/', '%%')
+  return session_dir .. '/' .. session_name .. '.vim'
+end
+
+-- Auto-save session on exit
+vim.api.nvim_create_autocmd('VimLeavePre', {
+  group = vim.api.nvim_create_augroup('session-autosave', { clear = true }),
+  callback = function()
+    if vim.fn.argc() == 0 then
+      vim.cmd('mksession! ' .. vim.fn.fnameescape(get_session_file()))
+    end
+  end,
+})
+
+-- Auto-restore session on startup (when no args)
+vim.api.nvim_create_autocmd('VimEnter', {
+  group = vim.api.nvim_create_augroup('session-autoload', { clear = true }),
+  callback = function()
+    if vim.fn.argc() == 0 then
+      local session_file = get_session_file()
+      if vim.fn.filereadable(session_file) == 1 then
+        vim.cmd('silent! source ' .. vim.fn.fnameescape(session_file))
+      end
+    end
+  end,
+  nested = true,
+})
+
+-- Keymaps for manual session control
+vim.keymap.set('n', '<leader>qs', function()
+  vim.cmd('mksession! ' .. vim.fn.fnameescape(get_session_file()))
+  vim.notify('Session saved', vim.log.levels.INFO)
+end, { desc = 'Save session' })
+
+vim.keymap.set('n', '<leader>qr', function()
+  local session_file = get_session_file()
+  if vim.fn.filereadable(session_file) == 1 then
+    vim.cmd('source ' .. vim.fn.fnameescape(session_file))
+    vim.notify('Session restored', vim.log.levels.INFO)
+  else
+    vim.notify('No session found', vim.log.levels.WARN)
+  end
+end, { desc = 'Restore session' })
+
 -- [[ Install `lazy.nvim` plugin manager ]]
 local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
