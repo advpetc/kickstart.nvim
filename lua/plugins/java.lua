@@ -35,6 +35,8 @@ return {
             '-Dlog.protocol=true',
             '-Dlog.level=ALL',
             '-Xmx16g',
+            '-XX:+UseG1GC',
+            '-XX:+UseStringDeduplication',
             '--add-modules=ALL-SYSTEM',
             '--add-opens', 'java.base/java.util=ALL-UNNAMED',
             '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
@@ -65,6 +67,7 @@ return {
                 maven = { enabled = true },
               },
               autobuild = { enabled = true },
+              maxConcurrentBuilds = 4,
               configuration = {
                 runtimes = {
                   {
