@@ -6,30 +6,6 @@ return {
   -- Git integration with vim-fugitive
   'tpope/vim-fugitive',
 
-  -- Session management (restore previous buffers)
-  {
-    'folke/persistence.nvim',
-    event = 'BufReadPre',
-    opts = {},
-    keys = {
-      { '<leader>qs', function() require('persistence').load() end, desc = 'Restore session' },
-      { '<leader>ql', function() require('persistence').load({ last = true }) end, desc = 'Restore last session' },
-      { '<leader>qd', function() require('persistence').stop() end, desc = "Don't save session" },
-    },
-    init = function()
-      -- Auto-restore session on startup
-      vim.api.nvim_create_autocmd('VimEnter', {
-        group = vim.api.nvim_create_augroup('persistence-autoload', { clear = true }),
-        callback = function()
-          if vim.fn.argc() == 0 and not vim.g.started_with_stdin then
-            require('persistence').load()
-          end
-        end,
-        nested = true,
-      })
-    end,
-  },
-
   -- Which-key for keybinding hints
   {
     'folke/which-key.nvim',
