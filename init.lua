@@ -218,6 +218,19 @@ vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper win
 -- vim.keymap.set("n", "<C-S-j>", "<C-w>J", { desc = "Move window to the lower" })
 -- vim.keymap.set("n", "<C-S-k>", "<C-w>K", { desc = "Move window to the upper" })
 
+-- Copy file path to clipboard
+vim.keymap.set('n', '<leader>cp', function()
+  local path = vim.fn.expand '%'
+  vim.fn.setreg('+', path)
+  print('Copied: ' .. path)
+end, { desc = '[C]opy file [P]ath (relative)' })
+
+vim.keymap.set('n', '<leader>cP', function()
+  local path = vim.fn.expand '%:p'
+  vim.fn.setreg('+', path)
+  print('Copied: ' .. path)
+end, { desc = '[C]opy file [P]ath (absolute)' })
+
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
 
@@ -315,6 +328,7 @@ require('lazy').setup({
         { '<leader>h', group = 'Git [H]unk', mode = { 'n', 'v' } },
         { '<leader>g', group = '[G]it' },
         { '<leader>j', group = '[J]ava', mode = { 'n', 'v' } },
+        { '<leader>c', group = '[C]opy' },
       },
     },
   },
@@ -387,7 +401,14 @@ require('lazy').setup({
             shorten = { len = 2, exclude = { -1, -2 } }, -- Abbreviate dirs to 2 chars, keep last 2 parts
           },
         },
-        -- pickers = {}
+        pickers = {
+          find_files = {
+            hidden = true, -- show dotfiles
+          },
+          live_grep = {
+            additional_args = { '--hidden' }, -- search in dotfiles
+          },
+        },
         extensions = {
           ['ui-select'] = { require('telescope.themes').get_dropdown() },
         },
