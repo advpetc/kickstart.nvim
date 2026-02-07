@@ -408,6 +408,9 @@ require('lazy').setup({
           live_grep = {
             additional_args = { '--hidden' }, -- search in dotfiles
           },
+          grep_string = {
+            additional_args = { '--hidden' }, -- search in dotfiles
+          },
         },
         extensions = {
           ['ui-select'] = { require('telescope.themes').get_dropdown() },
