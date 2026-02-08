@@ -329,6 +329,7 @@ require('lazy').setup({
         { '<leader>g', group = '[G]it' },
         { '<leader>j', group = '[J]ava', mode = { 'n', 'v' } },
         { '<leader>c', group = '[C]opy' },
+        { '<leader>d', group = '[D]ebug' },
       },
     },
   },
@@ -642,6 +643,8 @@ require('lazy').setup({
         'lua-language-server', -- Lua Language server (Mason package name)
         'stylua', -- Used to format Lua code
         'jdtls', -- Java Language server
+        'java-debug-adapter', -- Java debug adapter (DAP)
+        'java-test', -- Java test runner (DAP)
         -- You can add other tools here that you want Mason to install
       })
 
