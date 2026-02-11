@@ -296,6 +296,12 @@ require('lazy').setup({
         topdelete = { text = '‾' },
         changedelete = { text = '~' },
       },
+      current_line_blame = true,
+      current_line_blame_opts = {
+        delay = 300,
+        virt_text_pos = 'eol',
+      },
+      current_line_blame_formatter = '<author>, <author_time:%R>  <summary>',
     },
   },
 
@@ -893,11 +899,22 @@ require('lazy').setup({
       sessions.setup {
         directory = vim.fn.stdpath 'state' .. '/sessions/',
         autowrite = true, -- auto-save current session on exit
+        hooks = {
+          pre = { write = function() vim.cmd 'silent! Neotree close' end },
+          post = {
+            read = function()
+              for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+                local name = vim.api.nvim_buf_get_name(buf)
+                if name:find('neo%-tree ') then vim.api.nvim_buf_delete(buf, { force = true }) end
+              end
+            end,
+          },
+        },
       }
 
       vim.keymap.set('n', '<leader>qs', function()
         local name = vim.fn.input 'Session name (empty = auto): '
-        if name == '' then name = vim.fn.getcwd():gsub('/', '%%') end
+        if name == '' then name = vim.fn.fnamemodify(vim.fn.getcwd(), ':t') end
         sessions.write(name)
       end, { desc = 'Save session' })
 
