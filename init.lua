@@ -330,6 +330,7 @@ require('lazy').setup({
         { '<leader>j', group = '[J]ava', mode = { 'n', 'v' } },
         { '<leader>c', group = '[C]opy' },
         { '<leader>d', group = '[D]ebug' },
+        { '<leader>q', group = '[Q]uit/Session' },
       },
     },
   },
@@ -474,7 +475,7 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>/', function()
         -- You can pass additional configuration to Telescope to change the theme, layout, etc.
         builtin.current_buffer_fuzzy_find(require('telescope.themes').get_dropdown {
-          winblend = 10,
+          winblend = 0,
           previewer = false,
         })
       end, { desc = '[/] Fuzzily search in current buffer' })
@@ -872,6 +873,37 @@ require('lazy').setup({
       -- cursor location to LINE:COLUMN
       ---@diagnostic disable-next-line: duplicate-set-field
       statusline.section_location = function() return '%2l:%-2v' end
+
+      -- Abbreviate directory components to 2 chars, keep full filename
+      ---@diagnostic disable-next-line: duplicate-set-field
+      statusline.section_filename = function()
+        local path = vim.fn.expand '%:~:.'
+        if path == '' then return '[No Name]' end
+        local parts = vim.split(path, '/')
+        if #parts <= 1 then return path end
+        for i = 1, #parts - 1 do
+          parts[i] = parts[i]:sub(1, 2)
+        end
+        local modified = vim.bo.modified and ' [+]' or ''
+        return table.concat(parts, '/') .. modified
+      end
+
+      -- Session management
+      local sessions = require 'mini.sessions'
+      sessions.setup {
+        directory = vim.fn.stdpath 'state' .. '/sessions/',
+        autowrite = true, -- auto-save current session on exit
+      }
+
+      vim.keymap.set('n', '<leader>qs', function()
+        local name = vim.fn.input 'Session name (empty = auto): '
+        if name == '' then name = vim.fn.getcwd():gsub('/', '%%') end
+        sessions.write(name)
+      end, { desc = 'Save session' })
+
+      vim.keymap.set('n', '<leader>qr', function() sessions.select() end, { desc = 'Restore session (pick)' })
+
+      vim.keymap.set('n', '<leader>qd', function() sessions.select('delete') end, { desc = 'Delete session (pick)' })
 
       -- ... and there is more!
       --  Check out: https://github.com/nvim-mini/mini.nvim
