@@ -231,6 +231,18 @@ vim.keymap.set('n', '<leader>cP', function()
   print('Copied: ' .. path)
 end, { desc = '[C]opy file [P]ath (absolute)' })
 
+vim.keymap.set('n', '<leader>cl', function()
+  local file = vim.fn.expand '%:.'
+  local line = vim.fn.line '.'
+  local url = vim.fn.system({ 'gh', 'browse', '-n', file .. ':' .. line }):gsub('%s+$', '')
+  if vim.v.shell_error ~= 0 then
+    vim.notify('Not a GitHub repo', vim.log.levels.WARN)
+    return
+  end
+  vim.fn.setreg('+', url)
+  vim.notify('Copied: ' .. url, vim.log.levels.INFO)
+end, { desc = '[C]opy GitHub [L]ink' })
+
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
 
