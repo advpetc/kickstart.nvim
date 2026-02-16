@@ -9,19 +9,33 @@ return {
       'nvim-neotest/nvim-nio',
     },
     config = function()
-      -- Resolve JAVA_HOME: env var > macOS java_home utility > 'java' on PATH
-      local java_home = vim.env.JAVA_HOME
-      if not java_home or java_home == '' then
+      -- Resolve Java home for running jdtls (needs JDK 21+)
+      -- Priority: JDTLS_JAVA_HOME > JAVA_HOME > macOS java_home > java on PATH
+      local function resolve_java_home()
+        local home = vim.env.JDTLS_JAVA_HOME or vim.env.JAVA_HOME
+        if home and home ~= '' then return home end
+
         if vim.fn.has 'mac' == 1 then
-          java_home = vim.fn.trim(vim.fn.system '/usr/libexec/java_home 2>/dev/null')
-        end
-        if not java_home or java_home == '' then
-          local java_bin = vim.fn.exepath 'java'
-          if java_bin ~= '' then
-            -- java_bin is typically /path/to/jdk/bin/java → resolve symlinks and go up 2 dirs
-            java_home = vim.fn.fnamemodify(vim.fn.resolve(java_bin), ':h:h')
+          -- Try JDK 21 first, then any version
+          home = vim.fn.trim(vim.fn.system '/usr/libexec/java_home -v 21 2>/dev/null')
+          if home == '' then
+            home = vim.fn.trim(vim.fn.system '/usr/libexec/java_home 2>/dev/null')
           end
+          if home ~= '' then return home end
         end
+
+        local java_bin = vim.fn.exepath 'java'
+        if java_bin ~= '' then
+          return vim.fn.fnamemodify(vim.fn.resolve(java_bin), ':h:h')
+        end
+        return nil
+      end
+
+      local java_home = resolve_java_home()
+
+      if not java_home then
+        vim.notify('jdtls: No JDK found. Set JDTLS_JAVA_HOME or JAVA_HOME (JDK 21+ required).', vim.log.levels.ERROR)
+        return
       end
 
       local jdtls_path = vim.fn.stdpath 'data' .. '/mason/packages/jdtls'
