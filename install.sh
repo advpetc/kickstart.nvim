@@ -194,6 +194,47 @@ install_fd() {
   log_ok "fd installed"
 }
 
+# ─── Install luarocks ────────────────────────────────────────────────────────
+
+install_luarocks() {
+  if command -v luarocks &>/dev/null; then
+    log_ok "luarocks already installed ($(command -v luarocks))"
+    return 0
+  fi
+
+  case "$OS" in
+    macos)
+      log_info "Installing luarocks via Homebrew..."
+      brew install luarocks
+      ;;
+    centos)
+      log_info "Installing luarocks via package manager..."
+      $PKG_INSTALL luarocks
+      ;;
+    azurelinux)
+      # luarocks not in Azure Linux repos — build from source
+      local lr_version
+      lr_version=$(curl -fsSL https://api.github.com/repos/luarocks/luarocks/releases/latest | grep '"tag_name"' | sed -E 's/.*"v?([^"]+)".*/\1/')
+      if [ -z "$lr_version" ]; then
+        log_warn "Could not fetch luarocks version. Skipping."
+        return 0
+      fi
+      # Ensure lua headers are available for the build
+      $PKG_INSTALL lua lua-devel 2>/dev/null || $PKG_INSTALL lua 2>/dev/null || true
+      log_info "Building luarocks ${lr_version} from source..."
+      curl -fsSL "https://luarocks.org/releases/luarocks-${lr_version}.tar.gz" -o /tmp/luarocks.tar.gz
+      tar -xzf /tmp/luarocks.tar.gz -C /tmp
+      pushd "/tmp/luarocks-${lr_version}" > /dev/null
+      ./configure --with-lua-include=/usr/include 2>/dev/null || ./configure
+      make -j"$(nproc)" 2>/dev/null
+      sudo make install
+      popd > /dev/null
+      rm -rf /tmp/luarocks.tar.gz "/tmp/luarocks-${lr_version}"
+      ;;
+  esac
+  log_ok "luarocks installed"
+}
+
 # ─── Install tree-sitter CLI ──────────────────────────────────────────────────
 
 install_tree_sitter_cli() {
@@ -276,7 +317,7 @@ GHREPO
   install_package "gh" "gh" "gh"
 
   # luarocks — needed by lazy.nvim rocks support (used by blink.cmp, etc.)
-  install_package "luarocks" "luarocks" "luarocks" "luarocks"
+  install_luarocks
 
   # tree-sitter CLI — needed by nvim-treesitter to compile parsers
   install_tree_sitter_cli
