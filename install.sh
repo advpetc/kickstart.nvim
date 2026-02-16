@@ -238,6 +238,12 @@ install_luarocks() {
 # ─── Install tree-sitter CLI ──────────────────────────────────────────────────
 
 install_tree_sitter_cli() {
+  if [ "$OS" = "azurelinux" ]; then
+    log_warn "Skipping tree-sitter-cli on Azure Linux (glibc compatibility issues)."
+    log_info "Treesitter parsers won't be auto-compiled. Syntax highlighting uses vim regex fallback."
+    return 0
+  fi
+
   # Verify existing install actually works (pre-built binaries can fail on older glibc)
   if command -v tree-sitter &>/dev/null && tree-sitter --version &>/dev/null; then
     log_ok "tree-sitter-cli already installed ($(tree-sitter --version 2>/dev/null))"
@@ -248,15 +254,19 @@ install_tree_sitter_cli() {
     log_info "Installing tree-sitter via Homebrew..."
     brew install tree-sitter
   else
-    # Linux — build from source via Cargo to avoid glibc version mismatches
-    if ! command -v cargo &>/dev/null; then
-      log_info "Installing Rust toolchain (needed to build tree-sitter-cli)..."
-      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
-      # shellcheck disable=SC1091
-      source "$HOME/.cargo/env"
+    # CentOS/RHEL — install from GitHub release
+    local ts_version
+    ts_version=$(curl -fsSL https://api.github.com/repos/tree-sitter/tree-sitter/releases/latest | grep '"tag_name"' | sed -E 's/.*"v?([^"]+)".*/\1/')
+    if [ -z "$ts_version" ]; then
+      log_warn "Could not fetch tree-sitter version. Skipping."
+      return 0
     fi
-    log_info "Building tree-sitter-cli via cargo (compiles against local glibc)..."
-    cargo install tree-sitter-cli
+    local ts_url="https://github.com/tree-sitter/tree-sitter/releases/download/v${ts_version}/tree-sitter-linux-x64.gz"
+    log_info "Installing tree-sitter-cli ${ts_version} from GitHub release..."
+    curl -fsSL "$ts_url" -o /tmp/tree-sitter.gz
+    gunzip -f /tmp/tree-sitter.gz
+    sudo install -m 755 /tmp/tree-sitter /usr/local/bin/tree-sitter
+    rm -f /tmp/tree-sitter
   fi
   log_ok "tree-sitter-cli installed"
 }
@@ -596,9 +606,8 @@ bootstrap_lazy_nvim() {
 run_headless_setup() {
   log_step "Neovim Headless Setup (plugins, LSPs, parsers)"
 
-  # Ensure cargo/go binaries are on PATH for Neovim subprocesses
-  [ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
-  export PATH="$HOME/.cargo/bin:$HOME/go/bin:/usr/local/go/bin:$PATH"
+  # Ensure go/cargo binaries are on PATH for Neovim subprocesses
+  export PATH="$HOME/go/bin:/usr/local/go/bin:$HOME/.cargo/bin:$PATH"
 
   log_info "Installing plugins via lazy.nvim..."
   nvim --headless "+Lazy! sync" +qa 2>/dev/null || true
@@ -607,8 +616,12 @@ run_headless_setup() {
   # Give Mason time to install — MasonToolsInstallSync blocks until done
   nvim --headless "+MasonToolsInstallSync" +qa 2>/dev/null || true
 
-  log_info "Installing Treesitter parsers..."
-  nvim --headless "+TSUpdateSync" +qa 2>/dev/null || true
+  if [ "$OS" != "azurelinux" ]; then
+    log_info "Installing Treesitter parsers..."
+    nvim --headless "+TSUpdateSync" +qa 2>/dev/null || true
+  else
+    log_warn "Skipping Treesitter parser install on Azure Linux (no tree-sitter-cli)."
+  fi
 
   log_ok "Headless setup complete"
 }
