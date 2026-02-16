@@ -337,9 +337,13 @@ install_jdk() {
       log_info "Installing SDKMAN..."
       curl -fsSL "https://get.sdkman.io" | bash
       # shellcheck disable=SC1091
+      set +u
       source "$HOME/.sdkman/bin/sdkman-init.sh"
+      set -u
     fi
+    set +u
     sdk install java 21.0.6-ms || true
+    set -u
     log_ok "Microsoft JDK 21 installed via SDKMAN"
     return 0
   fi
