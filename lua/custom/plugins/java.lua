@@ -9,7 +9,21 @@ return {
       'nvim-neotest/nvim-nio',
     },
     config = function()
-      local java_home = '/Library/Java/JavaVirtualMachines/jdk21.0.6-msft.jdk/Contents/Home'
+      -- Resolve JAVA_HOME: env var > macOS java_home utility > 'java' on PATH
+      local java_home = vim.env.JAVA_HOME
+      if not java_home or java_home == '' then
+        if vim.fn.has 'mac' == 1 then
+          java_home = vim.fn.trim(vim.fn.system '/usr/libexec/java_home 2>/dev/null')
+        end
+        if not java_home or java_home == '' then
+          local java_bin = vim.fn.exepath 'java'
+          if java_bin ~= '' then
+            -- java_bin is typically /path/to/jdk/bin/java → resolve symlinks and go up 2 dirs
+            java_home = vim.fn.fnamemodify(vim.fn.resolve(java_bin), ':h:h')
+          end
+        end
+      end
+
       local jdtls_path = vim.fn.stdpath 'data' .. '/mason/packages/jdtls'
       local mason_packages = vim.fn.stdpath 'data' .. '/mason/packages'
 
@@ -52,7 +66,13 @@ return {
 
         local jdtls = require 'jdtls'
         local launcher_jar = vim.fn.glob(jdtls_path .. '/plugins/org.eclipse.equinox.launcher_*.jar')
-        local config_dir = jdtls_path .. '/config_mac_arm'
+        -- Detect jdtls platform config directory
+        local config_dir
+        if vim.fn.has 'mac' == 1 then
+          config_dir = jdtls_path .. (vim.uv.os_uname().machine == 'arm64' and '/config_mac_arm' or '/config_mac')
+        else
+          config_dir = jdtls_path .. '/config_linux'
+        end
 
         local project_name = vim.fn.fnamemodify(vim.fn.getcwd(), ':p:h:t')
         local workspace_dir = vim.fn.expand '~/.local/share/nvim/jdtls-workspace/' .. project_name
