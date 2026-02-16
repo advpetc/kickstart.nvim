@@ -308,11 +308,12 @@ install_go() {
 install_jdk() {
   log_step "JDK 21 (needed for jdtls Java LSP)"
 
-  # Check if any JDK 21 is already available
+  # Check if JDK 21 is already available
+  # Filter out JAVA_TOOL_OPTIONS noise (JVM prints it to stderr before version)
   if command -v java &>/dev/null; then
     local java_ver
-    java_ver=$(java -version 2>&1 | head -1)
-    if echo "$java_ver" | grep -q "21"; then
+    java_ver=$(java -version 2>&1 | grep -i 'version' | head -1)
+    if echo "$java_ver" | grep -q '"21\.'; then
       log_ok "JDK 21 already installed: $java_ver"
       return 0
     else
@@ -320,11 +321,26 @@ install_jdk() {
     fi
   fi
 
-  # Azure Linux ships Microsoft JDK 21 natively — no need to prompt
+  # Azure Linux — try known package names, fall back to SDKMAN
   if [ "$OS" = "azurelinux" ]; then
-    log_info "Installing Microsoft JDK 21 via tdnf (native Azure Linux package)..."
-    $PKG_INSTALL msopenjdk-21
-    log_ok "Microsoft JDK 21 installed via tdnf"
+    log_info "Attempting to install JDK 21 via package manager..."
+    # Try common Azure Linux JDK 21 package names
+    if $PKG_INSTALL msopenjdk-21 2>/dev/null; then
+      log_ok "Microsoft JDK 21 installed (msopenjdk-21)"
+      return 0
+    elif $PKG_INSTALL java-21-openjdk-devel 2>/dev/null; then
+      log_ok "OpenJDK 21 installed (java-21-openjdk-devel)"
+      return 0
+    fi
+    log_warn "JDK 21 not found in repos. Falling back to SDKMAN..."
+    if ! command -v sdk &>/dev/null; then
+      log_info "Installing SDKMAN..."
+      curl -fsSL "https://get.sdkman.io" | bash
+      # shellcheck disable=SC1091
+      source "$HOME/.sdkman/bin/sdkman-init.sh"
+    fi
+    sdk install java 21.0.6-ms || true
+    log_ok "Microsoft JDK 21 installed via SDKMAN"
     return 0
   fi
 
