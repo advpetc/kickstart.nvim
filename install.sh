@@ -118,28 +118,34 @@ install_package() {
 install_neovim() {
   log_step "Neovim"
 
+  # Fetch latest stable version tag from GitHub
+  local latest_version
+  latest_version=$(curl -fsSL https://api.github.com/repos/neovim/neovim/releases/latest | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
+  if [ -z "$latest_version" ]; then
+    log_error "Failed to fetch latest Neovim version from GitHub API."
+    exit 1
+  fi
+
+  # Check if already installed and up to date
   if command -v nvim &>/dev/null; then
-    local version
-    version=$(nvim --version | head -1)
-    log_ok "Neovim already installed: $version"
-    return 0
+    local current_version
+    current_version=$(nvim --version | head -1 | sed -E 's/NVIM v/v/')
+    if [ "$current_version" = "$latest_version" ]; then
+      log_ok "Neovim already up to date: $current_version"
+      return 0
+    fi
+    log_warn "Neovim outdated: $current_version (latest: $latest_version)"
   fi
 
   if [ "$OS" = "macos" ]; then
-    log_info "Installing Neovim via Homebrew..."
-    brew install neovim
+    log_info "Installing/upgrading Neovim via Homebrew..."
+    brew install neovim || brew upgrade neovim
   else
     # CentOS/Azure Linux — install from GitHub release (repos have outdated versions)
-    local nvim_version
-    nvim_version=$(curl -fsSL https://api.github.com/repos/neovim/neovim/releases/latest | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
-    if [ -z "$nvim_version" ]; then
-      log_error "Failed to fetch latest Neovim version from GitHub API."
-      exit 1
-    fi
-    local nvim_url="https://github.com/neovim/neovim/releases/download/${nvim_version}/nvim-linux-x86_64.tar.gz"
+    local nvim_url="https://github.com/neovim/neovim/releases/download/${latest_version}/nvim-linux-x86_64.tar.gz"
     local install_dir="/opt/nvim"
 
-    log_info "Installing Neovim ${nvim_version} from GitHub release..."
+    log_info "Installing Neovim ${latest_version} from GitHub release..."
     curl -fsSL "$nvim_url" -o /tmp/nvim-linux-x86_64.tar.gz
     sudo rm -rf "$install_dir"
     sudo mkdir -p "$install_dir"
