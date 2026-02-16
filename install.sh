@@ -314,9 +314,6 @@ GHREPO
 
   # luarocks — needed by lazy.nvim rocks support (used by blink.cmp, etc.)
   install_luarocks
-
-  # tree-sitter CLI — needed by nvim-treesitter to compile parsers
-  install_tree_sitter_cli
 }
 
 # ─── Install Node.js ─────────────────────────────────────────────────────────
@@ -693,6 +690,7 @@ main() {
   install_system_tools
   clone_nvim_config
   install_nodejs
+  install_tree_sitter_cli  # after Node.js — uses npm on Linux
   install_go
   install_jdk
   install_nerd_font
