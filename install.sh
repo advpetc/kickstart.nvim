@@ -3,7 +3,7 @@
 # install.sh — Bootstrap script for Neovim dotfiles
 #
 # Installs all dependencies needed by the Neovim configuration at ~/.config/nvim/
-# Supports: macOS (Homebrew), CentOS/RHEL (yum/dnf)
+# Supports: macOS (Homebrew), CentOS/RHEL (yum/dnf), Azure Linux/CBL-Mariner (tdnf)
 #
 # Usage:
 #   bash install.sh          # interactive (prompts for JDK method)
@@ -37,10 +37,12 @@ detect_os() {
       OS="macos"
       ;;
     Linux)
-      if [ -f /etc/centos-release ] || [ -f /etc/redhat-release ]; then
+      if [ -f /etc/mariner-release ] || [ -f /etc/azurelinux-release ]; then
+        OS="azurelinux"
+      elif [ -f /etc/centos-release ] || [ -f /etc/redhat-release ]; then
         OS="centos"
       else
-        log_error "Unsupported Linux distribution. This script supports macOS and CentOS/RHEL."
+        log_error "Unsupported Linux distribution. This script supports macOS, CentOS/RHEL, and Azure Linux."
         log_info  "You may still be able to adapt the commands for your distro."
         exit 1
       fi
@@ -63,6 +65,10 @@ setup_package_manager() {
     fi
     PKG_INSTALL="brew install"
     PKG_UPDATE="brew update"
+  elif [ "$OS" = "azurelinux" ]; then
+    # Azure Linux / CBL-Mariner — uses tdnf (Tiny DNF)
+    PKG_INSTALL="sudo tdnf install -y"
+    PKG_UPDATE="sudo tdnf makecache"
   else
     # CentOS/RHEL — prefer dnf, fall back to yum
     if command -v dnf &>/dev/null; then
@@ -80,6 +86,7 @@ install_package() {
   local cmd="$1"
   local pkg_macos="${2:-$1}"
   local pkg_centos="${3:-$1}"
+  local pkg_azurelinux="${4:-$pkg_centos}"  # defaults to CentOS name
 
   if command -v "$cmd" &>/dev/null; then
     log_ok "$cmd already installed ($(command -v "$cmd"))"
@@ -87,11 +94,11 @@ install_package() {
   fi
 
   local pkg
-  if [ "$OS" = "macos" ]; then
-    pkg="$pkg_macos"
-  else
-    pkg="$pkg_centos"
-  fi
+  case "$OS" in
+    macos)      pkg="$pkg_macos" ;;
+    azurelinux) pkg="$pkg_azurelinux" ;;
+    *)          pkg="$pkg_centos" ;;
+  esac
 
   log_info "Installing $pkg..."
   $PKG_INSTALL "$pkg"
@@ -114,7 +121,7 @@ install_neovim() {
     log_info "Installing Neovim via Homebrew..."
     brew install neovim
   else
-    # CentOS — install from GitHub release (repos have outdated versions)
+    # CentOS/Azure Linux — install from GitHub release (repos have outdated versions)
     local nvim_version="v0.10.4"
     local nvim_url="https://github.com/neovim/neovim/releases/download/${nvim_version}/nvim-linux-x86_64.tar.gz"
     local install_dir="/opt/nvim"
@@ -158,16 +165,28 @@ install_system_tools() {
   fi
 
   # Search tools
-  install_package "rg"  "ripgrep" "ripgrep"
-  install_package "fd"  "fd"      "fd-find"
+  install_package "rg"  "ripgrep" "ripgrep" "ripgrep"
+  install_package "fd"  "fd"      "fd-find" "fd"
 
   # GitHub CLI
-  if [ "$OS" = "centos" ] && ! command -v gh &>/dev/null; then
-    log_info "Adding GitHub CLI repo for CentOS..."
-    sudo dnf install -y 'dnf-command(config-manager)' 2>/dev/null \
-      || sudo yum install -y yum-utils 2>/dev/null || true
-    sudo dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo 2>/dev/null \
-      || sudo yum-config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo 2>/dev/null || true
+  if ! command -v gh &>/dev/null; then
+    if [ "$OS" = "centos" ]; then
+      log_info "Adding GitHub CLI repo for CentOS..."
+      sudo dnf install -y 'dnf-command(config-manager)' 2>/dev/null \
+        || sudo yum install -y yum-utils 2>/dev/null || true
+      sudo dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo 2>/dev/null \
+        || sudo yum-config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo 2>/dev/null || true
+    elif [ "$OS" = "azurelinux" ]; then
+      log_info "Adding GitHub CLI repo for Azure Linux..."
+      sudo rpm --import https://cli.github.com/packages/rpm/gh-cli.repo.key 2>/dev/null || true
+      sudo tee /etc/yum.repos.d/gh-cli.repo > /dev/null <<'GHREPO'
+[gh-cli]
+name=packages for the GitHub CLI
+baseurl=https://cli.github.com/packages/rpm
+enabled=1
+gpgkey=https://cli.github.com/packages/rpm/gh-cli.repo.key
+GHREPO
+    fi
   fi
   install_package "gh" "gh" "gh"
 }
@@ -184,6 +203,9 @@ install_nodejs() {
 
   if [ "$OS" = "macos" ]; then
     brew install node
+  elif [ "$OS" = "azurelinux" ]; then
+    log_info "Installing Node.js via tdnf..."
+    $PKG_INSTALL nodejs
   else
     # CentOS — use NodeSource repo for LTS
     log_info "Installing Node.js LTS via NodeSource..."
@@ -240,6 +262,14 @@ install_jdk() {
     else
       log_warn "Java found but not version 21: $java_ver"
     fi
+  fi
+
+  # Azure Linux ships Microsoft JDK 21 natively — no need to prompt
+  if [ "$OS" = "azurelinux" ]; then
+    log_info "Installing Microsoft JDK 21 via tdnf (native Azure Linux package)..."
+    $PKG_INSTALL msopenjdk-21
+    log_ok "Microsoft JDK 21 installed via tdnf"
+    return 0
   fi
 
   echo ""
@@ -472,6 +502,7 @@ show_help() {
   echo "Supports:"
   echo "  • macOS (Homebrew)"
   echo "  • CentOS / RHEL (yum/dnf)"
+  echo "  • Azure Linux / CBL-Mariner (tdnf)"
   echo ""
   echo "What gets installed:"
   echo "  • Neovim (latest stable)"

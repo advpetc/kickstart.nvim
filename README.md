@@ -4,7 +4,7 @@ A personalized Neovim configuration based on [kickstart.nvim](https://github.com
 
 ## Quick Install
 
-One-liner that installs all dependencies and clones the config (supports **macOS** and **CentOS/RHEL**):
+One-liner that installs all dependencies and clones the config (supports **macOS**, **CentOS/RHEL**, and **Azure Linux/CBL-Mariner**):
 
 ```sh
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/advpetc/kickstart.nvim/master/install.sh)"
