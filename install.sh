@@ -66,9 +66,17 @@ setup_package_manager() {
     PKG_INSTALL="brew install"
     PKG_UPDATE="brew update"
   elif [ "$OS" = "azurelinux" ]; then
-    # Azure Linux / CBL-Mariner — uses tdnf (Tiny DNF)
-    PKG_INSTALL="sudo tdnf install -y"
-    PKG_UPDATE="sudo tdnf makecache"
+    # Azure Linux 3.0 uses dnf, CBL-Mariner 2.0 uses tdnf
+    if command -v tdnf &>/dev/null; then
+      PKG_INSTALL="sudo tdnf install -y"
+      PKG_UPDATE="sudo tdnf makecache"
+    elif command -v dnf &>/dev/null; then
+      PKG_INSTALL="sudo dnf install -y"
+      PKG_UPDATE="sudo dnf makecache"
+    else
+      log_error "Neither tdnf nor dnf found on Azure Linux."
+      exit 1
+    fi
   else
     # CentOS/RHEL — prefer dnf, fall back to yum
     if command -v dnf &>/dev/null; then
