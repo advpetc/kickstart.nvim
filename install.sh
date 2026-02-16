@@ -194,6 +194,35 @@ install_fd() {
   log_ok "fd installed"
 }
 
+# ─── Install tree-sitter CLI ──────────────────────────────────────────────────
+
+install_tree_sitter_cli() {
+  if command -v tree-sitter &>/dev/null; then
+    log_ok "tree-sitter-cli already installed ($(command -v tree-sitter))"
+    return 0
+  fi
+
+  if [ "$OS" = "macos" ]; then
+    log_info "Installing tree-sitter via Homebrew..."
+    brew install tree-sitter
+  else
+    # Linux — not in most repos, install from GitHub release
+    local ts_version
+    ts_version=$(curl -fsSL https://api.github.com/repos/tree-sitter/tree-sitter/releases/latest | grep '"tag_name"' | sed -E 's/.*"v?([^"]+)".*/\1/')
+    if [ -z "$ts_version" ]; then
+      log_warn "Could not fetch tree-sitter version. Skipping."
+      return 0
+    fi
+    local ts_url="https://github.com/tree-sitter/tree-sitter/releases/download/v${ts_version}/tree-sitter-linux-x64.gz"
+    log_info "Installing tree-sitter-cli ${ts_version} from GitHub release..."
+    curl -fsSL "$ts_url" -o /tmp/tree-sitter.gz
+    gunzip -f /tmp/tree-sitter.gz
+    sudo install -m 755 /tmp/tree-sitter /usr/local/bin/tree-sitter
+    rm -f /tmp/tree-sitter
+  fi
+  log_ok "tree-sitter-cli installed"
+}
+
 # ─── Install System Tools ────────────────────────────────────────────────────
 
 install_system_tools() {
@@ -245,6 +274,12 @@ GHREPO
     fi
   fi
   install_package "gh" "gh" "gh"
+
+  # luarocks — needed by lazy.nvim rocks support (used by blink.cmp, etc.)
+  install_package "luarocks" "luarocks" "luarocks" "luarocks"
+
+  # tree-sitter CLI — needed by nvim-treesitter to compile parsers
+  install_tree_sitter_cli
 }
 
 # ─── Install Node.js ─────────────────────────────────────────────────────────
