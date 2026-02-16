@@ -151,6 +151,43 @@ install_neovim() {
   log_ok "Neovim installed: $(nvim --version | head -1)"
 }
 
+# ─── Install fd ──────────────────────────────────────────────────────────────
+
+install_fd() {
+  if command -v fd &>/dev/null || command -v fdfind &>/dev/null; then
+    log_ok "fd already installed ($(command -v fd || command -v fdfind))"
+    return 0
+  fi
+
+  case "$OS" in
+    macos)
+      log_info "Installing fd via Homebrew..."
+      brew install fd
+      ;;
+    centos)
+      log_info "Installing fd-find via package manager..."
+      $PKG_INSTALL fd-find
+      ;;
+    azurelinux)
+      # fd is not in Azure Linux repos — install from GitHub release
+      local fd_version
+      fd_version=$(curl -fsSL https://api.github.com/repos/sharkdp/fd/releases/latest | grep '"tag_name"' | sed -E 's/.*"v?([^"]+)".*/\1/')
+      if [ -z "$fd_version" ]; then
+        log_warn "Could not fetch fd version from GitHub. Skipping fd install."
+        return 0
+      fi
+      local fd_url="https://github.com/sharkdp/fd/releases/download/v${fd_version}/fd-v${fd_version}-x86_64-unknown-linux-gnu.tar.gz"
+      log_info "Installing fd ${fd_version} from GitHub release..."
+      curl -fsSL "$fd_url" -o /tmp/fd.tar.gz
+      tar -xzf /tmp/fd.tar.gz -C /tmp
+      sudo cp "/tmp/fd-v${fd_version}-x86_64-unknown-linux-gnu/fd" /usr/local/bin/fd
+      sudo chmod +x /usr/local/bin/fd
+      rm -rf /tmp/fd.tar.gz "/tmp/fd-v${fd_version}-x86_64-unknown-linux-gnu"
+      ;;
+  esac
+  log_ok "fd installed"
+}
+
 # ─── Install System Tools ────────────────────────────────────────────────────
 
 install_system_tools() {
@@ -179,7 +216,7 @@ install_system_tools() {
 
   # Search tools
   install_package "rg"  "ripgrep" "ripgrep" "ripgrep"
-  install_package "fd"  "fd"      "fd-find" "fd"
+  install_fd
 
   # GitHub CLI
   if ! command -v gh &>/dev/null; then
