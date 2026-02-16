@@ -130,7 +130,12 @@ install_neovim() {
     brew install neovim
   else
     # CentOS/Azure Linux — install from GitHub release (repos have outdated versions)
-    local nvim_version="v0.10.4"
+    local nvim_version
+    nvim_version=$(curl -fsSL https://api.github.com/repos/neovim/neovim/releases/latest | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
+    if [ -z "$nvim_version" ]; then
+      log_error "Failed to fetch latest Neovim version from GitHub API."
+      exit 1
+    fi
     local nvim_url="https://github.com/neovim/neovim/releases/download/${nvim_version}/nvim-linux-x86_64.tar.gz"
     local install_dir="/opt/nvim"
 
