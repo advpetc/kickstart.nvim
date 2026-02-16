@@ -13,7 +13,7 @@ sh -c "$(curl -fsSL https://raw.githubusercontent.com/advpetc/kickstart.nvim/mas
 This will:
 - Install Neovim (latest stable)
 - Install system tools (`git`, `make`, `gcc`, `ripgrep`, `fd`, `gh`)
-- Install Node.js, Go, and JDK 21 (interactive prompt for JDK method)
+- Install Node.js, Go, and a JDK (interactive — keep existing, package manager, or SDKMAN)
 - Install JetBrainsMono Nerd Font
 - Clone this config to `~/.config/nvim/` (backs up any existing config)
 - Install all plugins, LSP servers, and Treesitter parsers

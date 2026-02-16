@@ -379,55 +379,45 @@ install_go() {
   log_ok "Go installed: $(go version)"
 }
 
-# ─── Install JDK 21 ──────────────────────────────────────────────────────────
+# ─── Install JDK ─────────────────────────────────────────────────────────────
 
 install_jdk() {
-  log_step "JDK 21 (needed for jdtls Java LSP)"
+  log_step "JDK (needed for jdtls Java LSP)"
 
-  # Check if JDK 21 is already available
+  # Check if Java is already installed
   # Filter out JAVA_TOOL_OPTIONS noise (JVM prints it to stderr before version)
   if command -v java &>/dev/null; then
     local java_ver
     java_ver=$(java -version 2>&1 | grep -i 'version' | head -1)
-    if echo "$java_ver" | grep -q '"21\.'; then
-      log_ok "JDK 21 already installed: $java_ver"
-      return 0
-    else
-      log_warn "Java found but not version 21: $java_ver"
-    fi
-  fi
+    log_ok "Java already installed: $java_ver"
 
-  # Azure Linux — try known package names, fall back to SDKMAN
-  if [ "$OS" = "azurelinux" ]; then
-    log_info "Attempting to install JDK 21 via package manager..."
-    # Try common Azure Linux JDK 21 package names
-    if $PKG_INSTALL msopenjdk-21 2>/dev/null; then
-      log_ok "Microsoft JDK 21 installed (msopenjdk-21)"
-      return 0
-    elif $PKG_INSTALL java-21-openjdk-devel 2>/dev/null; then
-      log_ok "OpenJDK 21 installed (java-21-openjdk-devel)"
-      return 0
-    fi
-    log_warn "JDK 21 not found in repos. Falling back to SDKMAN..."
-    if ! command -v sdk &>/dev/null; then
-      log_info "Installing SDKMAN..."
-      curl -fsSL "https://get.sdkman.io" | bash
-      # shellcheck disable=SC1091
-      set +u
-      source "$HOME/.sdkman/bin/sdkman-init.sh"
-      set -u
-    fi
-    set +u
-    sdk install java 21.0.6-ms || true
-    set -u
-    log_ok "Microsoft JDK 21 installed via SDKMAN"
-    return 0
+    echo ""
+    echo -e "${BOLD}Use this Java version for jdtls?${NC}"
+    echo "  1) Yes, keep current version"
+    echo "  2) No, install a different version via SDKMAN"
+    echo ""
+    read -rp "Choose [1/2]: " keep_choice
+
+    case "$keep_choice" in
+      1)
+        log_ok "Keeping current Java: $java_ver"
+        log_info "Make sure JAVA_HOME in lua/custom/plugins/java.lua points to this JDK."
+        return 0
+        ;;
+      2)
+        # Fall through to SDKMAN install below
+        ;;
+      *)
+        log_ok "Keeping current Java: $java_ver"
+        return 0
+        ;;
+    esac
   fi
 
   echo ""
-  echo -e "${BOLD}How would you like to install JDK 21?${NC}"
-  echo "  1) System package manager (brew/yum — installs OpenJDK 21)"
-  echo "  2) SDKMAN (installs Microsoft JDK 21, matches config path)"
+  echo -e "${BOLD}How would you like to install Java?${NC}"
+  echo "  1) System package manager (brew/yum/tdnf)"
+  echo "  2) SDKMAN (choose from many JDK vendors and versions)"
   echo "  3) Skip (I'll install it myself)"
   echo ""
   read -rp "Choose [1/2/3]: " jdk_choice
@@ -435,38 +425,54 @@ install_jdk() {
   case "$jdk_choice" in
     1)
       if [ "$OS" = "macos" ]; then
-        log_info "Installing OpenJDK 21 via Homebrew..."
-        brew install openjdk@21
-        # Create symlink so system java finds it
-        sudo ln -sfn "$(brew --prefix openjdk@21)/libexec/openjdk.jdk" \
-          /Library/Java/JavaVirtualMachines/openjdk-21.jdk 2>/dev/null || true
-        log_info "You may need to update JAVA_HOME in your jdtls config."
+        log_info "Installing OpenJDK via Homebrew..."
+        brew install openjdk
+        sudo ln -sfn "$(brew --prefix openjdk)/libexec/openjdk.jdk" \
+          /Library/Java/JavaVirtualMachines/openjdk.jdk 2>/dev/null || true
       else
-        log_info "Installing OpenJDK 21 via package manager..."
-        $PKG_INSTALL java-21-openjdk-devel
+        log_info "Installing OpenJDK via package manager..."
+        # Try common package names across distros
+        $PKG_INSTALL java-latest-openjdk-devel 2>/dev/null \
+          || $PKG_INSTALL java-21-openjdk-devel 2>/dev/null \
+          || $PKG_INSTALL java-17-openjdk-devel 2>/dev/null \
+          || { log_error "Could not find an OpenJDK package. Try option 2 (SDKMAN) instead."; return 0; }
       fi
-      log_ok "JDK 21 installed via package manager"
+      log_ok "Java installed via package manager"
+      log_info "Update JAVA_HOME in lua/custom/plugins/java.lua to match your installed JDK path."
       ;;
     2)
       if ! command -v sdk &>/dev/null; then
         log_info "Installing SDKMAN..."
         curl -fsSL "https://get.sdkman.io" | bash
         # shellcheck disable=SC1091
+        set +u
         source "$HOME/.sdkman/bin/sdkman-init.sh"
+        set -u
       fi
-      log_info "Installing Microsoft JDK 21 via SDKMAN..."
-      sdk install java 21.0.6-ms || true
-      log_ok "Microsoft JDK 21 installed via SDKMAN"
-      log_info "The jdtls config expects JAVA_HOME at:"
-      log_info "  /Library/Java/JavaVirtualMachines/jdk21.0.6-msft.jdk/Contents/Home"
-      log_info "You may need to create a symlink if the SDKMAN path differs."
+      echo ""
+      log_info "Available JDK versions (showing first 30):"
+      echo ""
+      set +u
+      sdk list java 2>/dev/null | head -40 || true
+      set -u
+      echo ""
+      read -rp "Enter the JDK identifier to install (e.g., 21.0.6-ms, 21.0.5-tem, 17.0.13-amzn): " jdk_id
+      if [ -n "$jdk_id" ]; then
+        set +u
+        sdk install java "$jdk_id" || true
+        set -u
+        log_ok "JDK $jdk_id installed via SDKMAN"
+      else
+        log_warn "No JDK identifier provided. Skipping."
+      fi
+      log_info "Update JAVA_HOME in lua/custom/plugins/java.lua to match your installed JDK path."
       ;;
     3)
-      log_warn "Skipping JDK 21 installation."
-      log_info "jdtls requires JDK 21. Install it manually and update lua/custom/plugins/java.lua"
+      log_warn "Skipping JDK installation."
+      log_info "jdtls requires a JDK. Install one manually and update lua/custom/plugins/java.lua"
       ;;
     *)
-      log_warn "Invalid choice. Skipping JDK 21 installation."
+      log_warn "Invalid choice. Skipping JDK installation."
       ;;
   esac
 }
@@ -662,7 +668,7 @@ show_help() {
   echo "  • System tools: git, make, gcc, unzip, curl, ripgrep, fd, gh"
   echo "  • Node.js (for Mason LSP installs)"
   echo "  • Go (for delve DAP)"
-  echo "  • JDK 21 (interactive — choose package manager or SDKMAN)"
+  echo "  • JDK (interactive — keep existing, package manager, or SDKMAN)"
   echo "  • JetBrainsMono Nerd Font"
   echo "  • lazy.nvim plugin manager"
   echo "  • All Neovim plugins, LSP servers, and Treesitter parsers"
