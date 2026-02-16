@@ -226,6 +226,7 @@ The Java configuration uses [nvim-jdtls](https://github.com/mfussenegger/nvim-jd
 ~/.config/nvim/
 ├── init.lua                        Main config (~1000 lines)
 ├── install.sh                      Dependency installer
+├── uninstall.sh                    Config & data remover
 ├── lazy-lock.json                  Plugin lock file
 ├── .stylua.toml                    Lua formatter config
 └── lua/
@@ -245,9 +246,16 @@ The Java configuration uses [nvim-jdtls](https://github.com/mfussenegger/nvim-jd
 
 ## Uninstall
 
+Interactive (confirms before each removal):
+
 ```sh
-rm -rf ~/.config/nvim
-rm -rf ~/.local/share/nvim
-rm -rf ~/.local/state/nvim
-rm -rf ~/.cache/nvim
+bash ~/.config/nvim/uninstall.sh
 ```
+
+Remove everything without prompting:
+
+```sh
+bash ~/.config/nvim/uninstall.sh --all
+```
+
+> System tools (Neovim, ripgrep, Node.js, etc.) are not removed. Uninstall them via your package manager if needed.
