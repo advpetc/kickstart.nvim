@@ -9,6 +9,9 @@
 #   bash install.sh          # interactive (prompts for JDK method)
 #   bash install.sh --help   # show help
 #
+# One-liner (no clone needed):
+#   sh -c "$(curl -fsSL https://raw.githubusercontent.com/advpetc/kickstart.nvim/master/install.sh)"
+#
 set -euo pipefail
 
 # ─── Colors & Logging ────────────────────────────────────────────────────────
@@ -351,6 +354,43 @@ setup_li_format() {
   fi
 }
 
+# ─── Clone Neovim Config ─────────────────────────────────────────────────────
+
+NVIM_CONFIG_REPO="https://github.com/advpetc/kickstart.nvim.git"
+NVIM_CONFIG_DIR="${HOME}/.config/nvim"
+
+clone_nvim_config() {
+  log_step "Neovim Configuration"
+
+  if [ -d "$NVIM_CONFIG_DIR/.git" ]; then
+    log_ok "Neovim config already exists at $NVIM_CONFIG_DIR (git repo)"
+    log_info "Pulling latest changes..."
+    git -C "$NVIM_CONFIG_DIR" pull --ff-only 2>/dev/null || log_warn "Could not pull — you may have local changes"
+    return 0
+  fi
+
+  if [ -d "$NVIM_CONFIG_DIR" ] || [ -f "$NVIM_CONFIG_DIR" ]; then
+    local backup="${NVIM_CONFIG_DIR}.bak.$(date +%Y%m%d%H%M%S)"
+    log_warn "Existing config found at $NVIM_CONFIG_DIR"
+    log_info "Backing up to $backup"
+    mv "$NVIM_CONFIG_DIR" "$backup"
+  fi
+
+  # Also back up existing Neovim data/state/cache if present
+  for dir in "${HOME}/.local/share/nvim" "${HOME}/.local/state/nvim" "${HOME}/.cache/nvim"; do
+    if [ -d "$dir" ]; then
+      local dir_backup="${dir}.bak.$(date +%Y%m%d%H%M%S)"
+      log_info "Backing up $dir → $dir_backup"
+      mv "$dir" "$dir_backup"
+    fi
+  done
+
+  log_info "Cloning Neovim config from $NVIM_CONFIG_REPO..."
+  mkdir -p "$(dirname "$NVIM_CONFIG_DIR")"
+  git clone "$NVIM_CONFIG_REPO" "$NVIM_CONFIG_DIR"
+  log_ok "Neovim config cloned to $NVIM_CONFIG_DIR"
+}
+
 # ─── Bootstrap lazy.nvim ─────────────────────────────────────────────────────
 
 bootstrap_lazy_nvim() {
@@ -423,7 +463,11 @@ print_summary() {
 show_help() {
   echo "Usage: bash install.sh"
   echo ""
-  echo "Installs all dependencies for the Neovim configuration at ~/.config/nvim/"
+  echo "One-liner install (no clone needed):"
+  echo "  sh -c \"\\\$(curl -fsSL https://raw.githubusercontent.com/advpetc/kickstart.nvim/master/install.sh)\""
+  echo ""
+  echo "Installs all dependencies for the Neovim configuration and clones the"
+  echo "config repo to ~/.config/nvim/ (backs up any existing config)."
   echo ""
   echo "Supports:"
   echo "  • macOS (Homebrew)"
@@ -431,6 +475,7 @@ show_help() {
   echo ""
   echo "What gets installed:"
   echo "  • Neovim (latest stable)"
+  echo "  • Neovim config (cloned from GitHub)"
   echo "  • System tools: git, make, gcc, unzip, curl, ripgrep, fd, gh"
   echo "  • Node.js (for Mason LSP installs)"
   echo "  • Go (for delve DAP)"
@@ -461,6 +506,7 @@ main() {
   setup_package_manager
   install_neovim
   install_system_tools
+  clone_nvim_config
   install_nodejs
   install_go
   install_jdk
