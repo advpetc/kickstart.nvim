@@ -238,8 +238,9 @@ install_luarocks() {
 # ─── Install tree-sitter CLI ──────────────────────────────────────────────────
 
 install_tree_sitter_cli() {
-  if command -v tree-sitter &>/dev/null; then
-    log_ok "tree-sitter-cli already installed ($(command -v tree-sitter))"
+  # Verify existing install actually works (pre-built binaries can fail on older glibc)
+  if command -v tree-sitter &>/dev/null && tree-sitter --version &>/dev/null; then
+    log_ok "tree-sitter-cli already installed ($(tree-sitter --version 2>/dev/null))"
     return 0
   fi
 
@@ -247,15 +248,15 @@ install_tree_sitter_cli() {
     log_info "Installing tree-sitter via Homebrew..."
     brew install tree-sitter
   else
-    # Linux — install via npm (avoids glibc version mismatches with pre-built binaries)
-    if command -v npm &>/dev/null; then
-      log_info "Installing tree-sitter-cli via npm..."
-      sudo npm install -g tree-sitter-cli
-    else
-      log_warn "npm not found. Skipping tree-sitter-cli install."
-      log_info "Install Node.js first, then run: npm install -g tree-sitter-cli"
-      return 0
+    # Linux — build from source via Cargo to avoid glibc version mismatches
+    if ! command -v cargo &>/dev/null; then
+      log_info "Installing Rust toolchain (needed to build tree-sitter-cli)..."
+      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
+      # shellcheck disable=SC1091
+      source "$HOME/.cargo/env"
     fi
+    log_info "Building tree-sitter-cli via cargo (compiles against local glibc)..."
+    cargo install tree-sitter-cli
   fi
   log_ok "tree-sitter-cli installed"
 }
@@ -594,6 +595,10 @@ bootstrap_lazy_nvim() {
 
 run_headless_setup() {
   log_step "Neovim Headless Setup (plugins, LSPs, parsers)"
+
+  # Ensure cargo/go binaries are on PATH for Neovim subprocesses
+  [ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
+  export PATH="$HOME/.cargo/bin:$HOME/go/bin:/usr/local/go/bin:$PATH"
 
   log_info "Installing plugins via lazy.nvim..."
   nvim --headless "+Lazy! sync" +qa 2>/dev/null || true
