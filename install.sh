@@ -247,19 +247,15 @@ install_tree_sitter_cli() {
     log_info "Installing tree-sitter via Homebrew..."
     brew install tree-sitter
   else
-    # Linux — not in most repos, install from GitHub release
-    local ts_version
-    ts_version=$(curl -fsSL https://api.github.com/repos/tree-sitter/tree-sitter/releases/latest | grep '"tag_name"' | sed -E 's/.*"v?([^"]+)".*/\1/')
-    if [ -z "$ts_version" ]; then
-      log_warn "Could not fetch tree-sitter version. Skipping."
+    # Linux — install via npm (avoids glibc version mismatches with pre-built binaries)
+    if command -v npm &>/dev/null; then
+      log_info "Installing tree-sitter-cli via npm..."
+      sudo npm install -g tree-sitter-cli
+    else
+      log_warn "npm not found. Skipping tree-sitter-cli install."
+      log_info "Install Node.js first, then run: npm install -g tree-sitter-cli"
       return 0
     fi
-    local ts_url="https://github.com/tree-sitter/tree-sitter/releases/download/v${ts_version}/tree-sitter-linux-x64.gz"
-    log_info "Installing tree-sitter-cli ${ts_version} from GitHub release..."
-    curl -fsSL "$ts_url" -o /tmp/tree-sitter.gz
-    gunzip -f /tmp/tree-sitter.gz
-    sudo install -m 755 /tmp/tree-sitter /usr/local/bin/tree-sitter
-    rm -f /tmp/tree-sitter
   fi
   log_ok "tree-sitter-cli installed"
 }
