@@ -481,6 +481,123 @@ install_jdk() {
   esac
 }
 
+# ─── Setup JDTLS_JAVA_HOME (LinkedIn environments) ───────────────────────────
+
+setup_jdtls_java_home() {
+  log_step "JDTLS Java Configuration"
+
+  local jdk_base_dir="/export/apps/jdk"
+  local selected_jdk=""
+  local selected_version=0
+  local is_compatible=false
+
+  # Check if the LinkedIn JDK directory exists
+  if [ ! -d "$jdk_base_dir" ]; then
+    log_info "JDK directory $jdk_base_dir not found — skipping JDTLS_JAVA_HOME setup"
+    log_info "If jdtls fails, set JDTLS_JAVA_HOME manually to your Java 21+ installation"
+    return 0
+  fi
+
+  # Scan for all JDK installations and find the best one
+  log_info "Scanning for Java installations in $jdk_base_dir..."
+
+  while IFS= read -r jdk_dir; do
+    local jdk_path="$jdk_base_dir/$jdk_dir"
+
+    # Skip if not a directory or no java binary
+    [ ! -d "$jdk_path" ] && continue
+    [ ! -x "$jdk_path/bin/java" ] && continue
+
+    # Extract version number from directory name (e.g., JDK-21_0_0-msft -> 21)
+    local version_major
+    if [[ "$jdk_dir" =~ JDK-([0-9]+) ]]; then
+      version_major="${BASH_REMATCH[1]}"
+    else
+      continue
+    fi
+
+    # Prefer Java 21+ (compatible with jdtls), but track highest version found
+    if [ "$version_major" -ge 21 ]; then
+      if [ "$version_major" -gt "$selected_version" ]; then
+        selected_jdk="$jdk_path"
+        selected_version="$version_major"
+        is_compatible=true
+      fi
+    elif [ "$version_major" -gt "$selected_version" ]; then
+      # Fallback: track highest version even if < 21
+      selected_jdk="$jdk_path"
+      selected_version="$version_major"
+    fi
+  done < <(ls "$jdk_base_dir" 2>/dev/null)
+
+  # No JDK found at all
+  if [ -z "$selected_jdk" ]; then
+    log_warn "No JDK installations found in $jdk_base_dir"
+    log_info "If jdtls fails, set JDTLS_JAVA_HOME manually to your Java 21+ installation"
+    return 0
+  fi
+
+  # Verify the selected JDK is actually executable
+  if ! "$selected_jdk/bin/java" -version &>/dev/null; then
+    log_warn "Selected JDK at $selected_jdk is not executable"
+    return 0
+  fi
+
+  # Provide appropriate feedback based on version
+  if [ "$is_compatible" = true ]; then
+    log_ok "Found Java $selected_version at $selected_jdk (compatible with jdtls)"
+  else
+    log_warn "Found Java $selected_version at $selected_jdk"
+    log_warn "jdtls requires Java 21+. LSP may fail to start."
+    log_info "Install Java 21+ and re-run this script, or set JDTLS_JAVA_HOME manually"
+  fi
+
+  # Add to .bashrc if not already there
+  if [ -f "$HOME/.bashrc" ]; then
+    if grep -q "export JDTLS_JAVA_HOME=" "$HOME/.bashrc" 2>/dev/null; then
+      log_info "Updating JDTLS_JAVA_HOME in .bashrc..."
+      # Remove old entry and add new one
+      sed -i.bak '/export JDTLS_JAVA_HOME=/d' "$HOME/.bashrc"
+      sed -i.bak '/# Java.*for JDTLS/d' "$HOME/.bashrc"
+    else
+      log_info "Adding JDTLS_JAVA_HOME to .bashrc..."
+    fi
+    cat >> "$HOME/.bashrc" <<EOF
+
+# Java $selected_version for JDTLS (Neovim Java LSP)
+export JDTLS_JAVA_HOME=$selected_jdk
+EOF
+    log_ok "JDTLS_JAVA_HOME added to .bashrc"
+  fi
+
+  # Add to .zshrc if it exists
+  if [ -f "$HOME/.zshrc" ]; then
+    if grep -q "export JDTLS_JAVA_HOME=" "$HOME/.zshrc" 2>/dev/null; then
+      log_info "Updating JDTLS_JAVA_HOME in .zshrc..."
+      # Remove old entry and add new one
+      sed -i.bak '/export JDTLS_JAVA_HOME=/d' "$HOME/.zshrc"
+      sed -i.bak '/# Java.*for JDTLS/d' "$HOME/.zshrc"
+    else
+      log_info "Adding JDTLS_JAVA_HOME to .zshrc..."
+    fi
+    cat >> "$HOME/.zshrc" <<EOF
+
+# Java $selected_version for JDTLS (Neovim Java LSP)
+export JDTLS_JAVA_HOME=$selected_jdk
+EOF
+    log_ok "JDTLS_JAVA_HOME added to .zshrc"
+  fi
+
+  # Export for current session
+  export JDTLS_JAVA_HOME="$selected_jdk"
+
+  if [ "$is_compatible" = true ]; then
+    log_ok "JDTLS configured to use Java $selected_version"
+  else
+    log_warn "JDTLS configured with Java $selected_version (may not work - needs 21+)"
+  fi
+}
+
 # ─── Install Nerd Font ────────────────────────────────────────────────────────
 
 install_nerd_font() {
@@ -711,6 +828,7 @@ main() {
   install_tree_sitter_cli  # after Node.js — uses npm on Linux
   install_go
   install_jdk
+  setup_jdtls_java_home  # Configure Java 21 for jdtls if available
   install_nerd_font
   setup_li_format
   bootstrap_lazy_nvim
