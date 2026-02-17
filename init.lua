@@ -959,20 +959,8 @@ require('lazy').setup({
     end,
   },
 
-  { -- Highlight, edit, and navigate code
-    'nvim-treesitter/nvim-treesitter',
-    config = function()
-      local filetypes = { 'bash', 'c', 'diff', 'html', 'java', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' }
-      -- Only auto-install parsers if tree-sitter CLI is available
-      if vim.fn.executable 'tree-sitter' == 1 then
-        require('nvim-treesitter').install(filetypes)
-      end
-      vim.api.nvim_create_autocmd('FileType', {
-        pattern = filetypes,
-        callback = function() vim.treesitter.start() end,
-      })
-    end,
-  },
+  -- Note: Neovim 0.11+ has built-in treesitter support
+  -- Treesitter will be enabled automatically for supported filetypes
 
   -- The following comments only work if you have downloaded the kickstart repo, not just copy pasted the
   -- init.lua. If you want these files, they are in the repository, so you can just download them and
