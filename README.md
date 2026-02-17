@@ -2,12 +2,18 @@
 
 A personalized Neovim configuration based on [kickstart.nvim](https://github.com/nvim-lua/kickstart.nvim), tailored for Java and Go development with a focus on clean keybindings, git integration, and a minimal UI.
 
+## Requirements
+
+- **Neovim 0.10+** (uses `vim.keymap`, `vim.diagnostic.config`, and other modern APIs)
+- **JDK 21+** for Java LSP (jdtls)
+- Nerd Font (JetBrainsMono recommended)
+
 ## Quick Install
 
 One-liner that installs all dependencies and clones the config (supports **macOS**, **CentOS/RHEL**, and **Azure Linux/CBL-Mariner**):
 
 ```sh
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/advpetc/kickstart.nvim/master/install.sh)"
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/advpetc/kickstart.nvim/rdev-setup/install.sh)"
 ```
 
 This will:
@@ -26,7 +32,7 @@ If you prefer to install dependencies yourself:
 
 ```sh
 # 1. Clone the config
-git clone https://github.com/advpetc/kickstart.nvim.git ~/.config/nvim
+git clone -b rdev-setup https://github.com/advpetc/kickstart.nvim.git ~/.config/nvim
 
 # 2. Install dependencies (macOS example)
 brew install neovim ripgrep fd gh node go
@@ -46,6 +52,26 @@ sudo ln -sf /opt/nvim/bin/nvim /usr/local/bin/nvim
 
 # System tools
 sudo dnf install -y git make gcc gcc-c++ unzip curl ripgrep fd-find nodejs
+```
+
+</details>
+
+<details><summary>Azure Linux / CBL-Mariner</summary>
+
+```sh
+# Neovim (from GitHub release)
+curl -fsSL https://github.com/neovim/neovim/releases/download/v0.10.4/nvim-linux-x86_64.tar.gz -o /tmp/nvim.tar.gz
+sudo mkdir -p /opt/nvim && sudo tar -xzf /tmp/nvim.tar.gz -C /opt/nvim --strip-components=1
+sudo ln -sf /opt/nvim/bin/nvim /usr/local/bin/nvim
+
+# System tools (use tdnf on CBL-Mariner 2.0, dnf on Azure Linux 3.0)
+sudo tdnf install -y git make gcc unzip curl ripgrep nodejs
+
+# fd (not in repos — install from GitHub release)
+FD_VERSION=$(curl -fsSL https://api.github.com/repos/sharkdp/fd/releases/latest | grep '"tag_name"' | sed -E 's/.*"v?([^"]+)".*/\1/')
+curl -fsSL "https://github.com/sharkdp/fd/releases/download/v${FD_VERSION}/fd-v${FD_VERSION}-x86_64-unknown-linux-gnu.tar.gz" -o /tmp/fd.tar.gz
+tar -xzf /tmp/fd.tar.gz -C /tmp
+sudo cp /tmp/fd-v${FD_VERSION}-x86_64-unknown-linux-gnu/fd /usr/local/bin/fd
 ```
 
 </details>
@@ -212,10 +238,20 @@ Sessions are stored in `~/.local/state/nvim/sessions/` via `mini.sessions`:
 
 The Java configuration uses [nvim-jdtls](https://github.com/mfussenegger/nvim-jdtls) with:
 
-- **JDK 21** (Microsoft build) at `/Library/Java/JavaVirtualMachines/jdk21.0.6-msft.jdk/Contents/Home`
+- **JDK 21+** required (auto-detected, see resolution order below)
 - **Gradle & Maven** import support with source downloading
 - **DAP debugging** with hot code replace
 - **Workspace**: `~/.local/share/nvim/jdtls-workspace/`
+
+### JDK Resolution Order
+
+1. `JDTLS_JAVA_HOME` environment variable (explicit override)
+2. Known JDK 21 paths on Linux:
+   - `/export/apps/jdk/JDK-21_0_0-msft` (LinkedIn internal)
+   - `/usr/lib/jvm/java-21-openjdk`
+   - `/usr/lib/jvm/java-21-openjdk-amd64`
+3. macOS: `/usr/libexec/java_home -v 21`
+4. `JAVA_HOME` environment variable (fallback)
 
 > Run `./gradlew build` before opening a project to generate required jars.
 > Use `<leader>jx` (`:JdtlsClearCache`) to reset the jdtls workspace if things go wrong.
