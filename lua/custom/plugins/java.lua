@@ -202,8 +202,10 @@ return {
         callback = start_jdtls,
       })
 
-      -- Start immediately for current buffer
-      start_jdtls()
+      -- Start immediately only if current buffer is a Java file
+      if vim.bo.filetype == 'java' then
+        start_jdtls()
+      end
     end,
   },
 }
