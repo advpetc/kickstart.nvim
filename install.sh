@@ -10,7 +10,7 @@
 #   bash install.sh --help   # show help
 #
 # One-liner (no clone needed):
-#   sh -c "$(curl -fsSL https://raw.githubusercontent.com/advpetc/kickstart.nvim/master/install.sh)"
+#   sh -c "$(curl -fsSL https://raw.githubusercontent.com/advpetc/kickstart.nvim/rdev-setup/install.sh)"
 #
 set -euo pipefail
 
@@ -698,7 +698,7 @@ clone_nvim_config() {
 
   log_info "Cloning Neovim config from $NVIM_CONFIG_REPO..."
   mkdir -p "$(dirname "$NVIM_CONFIG_DIR")"
-  git clone "$NVIM_CONFIG_REPO" "$NVIM_CONFIG_DIR"
+  git clone -b rdev-setup "$NVIM_CONFIG_REPO" "$NVIM_CONFIG_DIR"
   log_ok "Neovim config cloned to $NVIM_CONFIG_DIR"
 }
 
@@ -782,7 +782,7 @@ show_help() {
   echo "Usage: bash install.sh"
   echo ""
   echo "One-liner install (no clone needed):"
-  echo "  sh -c \"\\\$(curl -fsSL https://raw.githubusercontent.com/advpetc/kickstart.nvim/master/install.sh)\""
+  echo "  sh -c \"\\\$(curl -fsSL https://raw.githubusercontent.com/advpetc/kickstart.nvim/rdev-setup/install.sh)\""
   echo ""
   echo "Installs all dependencies for the Neovim configuration and clones the"
   echo "config repo to ~/.config/nvim/ (backs up any existing config)."
