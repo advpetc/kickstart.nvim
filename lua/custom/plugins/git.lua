@@ -8,6 +8,8 @@ return {
       { '<leader>gh', '<cmd>DiffviewFileHistory %<cr>', desc = 'Git file history' },
       { '<leader>gH', '<cmd>DiffviewFileHistory<cr>', desc = 'Git branch history' },
       { '<leader>gc', '<cmd>DiffviewClose<cr>', desc = 'Close diff view' },
+      { '<leader>gR', '<cmd>!git reset --hard<cr>', desc = 'Git reset --hard (entire repo)' },
+      { '<leader>gr', '<cmd>!git reset<cr>', desc = 'Git reset (unstage all, keep changes)' },
     },
     opts = {
       enhanced_diff_hl = true,
