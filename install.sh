@@ -591,8 +591,23 @@ EOF
   # Export for current session
   export JDTLS_JAVA_HOME="$selected_jdk"
 
+  # Reload shell configuration to apply changes immediately
+  if [ -n "$BASH_VERSION" ] && [ -f "$HOME/.bashrc" ]; then
+    log_info "Reloading bash configuration..."
+    # shellcheck disable=SC1091
+    set +u
+    source "$HOME/.bashrc"
+    set -u
+  elif [ -n "$ZSH_VERSION" ] && [ -f "$HOME/.zshrc" ]; then
+    log_info "Reloading zsh configuration..."
+    # shellcheck disable=SC1091
+    set +u
+    source "$HOME/.zshrc"
+    set -u
+  fi
+
   if [ "$is_compatible" = true ]; then
-    log_ok "JDTLS configured to use Java $selected_version"
+    log_ok "JDTLS configured to use Java $selected_version (environment reloaded)"
   else
     log_warn "JDTLS configured with Java $selected_version (may not work - needs 21+)"
   fi
