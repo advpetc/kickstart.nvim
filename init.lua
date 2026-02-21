@@ -222,12 +222,22 @@ vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper win
 vim.keymap.set('n', '<leader>cp', function()
   local path = vim.fn.expand '%'
   vim.fn.setreg('+', path)
+  -- Also copy via OSC 52 for remote SSH sessions
+  local ok, osc52 = pcall(require, 'osc52')
+  if ok then
+    osc52.copy(path)
+  end
   print('Copied: ' .. path)
 end, { desc = '[C]opy file [P]ath (relative)' })
 
 vim.keymap.set('n', '<leader>cP', function()
   local path = vim.fn.expand '%:p'
   vim.fn.setreg('+', path)
+  -- Also copy via OSC 52 for remote SSH sessions
+  local ok, osc52 = pcall(require, 'osc52')
+  if ok then
+    osc52.copy(path)
+  end
   print('Copied: ' .. path)
 end, { desc = '[C]opy file [P]ath (absolute)' })
 
@@ -240,6 +250,11 @@ vim.keymap.set('n', '<leader>cl', function()
     return
   end
   vim.fn.setreg('+', url)
+  -- Also copy via OSC 52 for remote SSH sessions
+  local ok, osc52 = pcall(require, 'osc52')
+  if ok then
+    osc52.copy(url)
+  end
   vim.notify('Copied: ' .. url, vim.log.levels.INFO)
 end, { desc = '[C]opy GitHub [L]ink' })
 
@@ -658,7 +673,9 @@ require('lazy').setup({
       --  By default, Neovim doesn't support everything that is in the LSP specification.
       --  When you add blink.cmp, luasnip, etc. Neovim now has *more* capabilities.
       --  So, we create new capabilities with blink.cmp, and then broadcast that to the servers.
-      local capabilities = require('blink.cmp').get_lsp_capabilities()
+      local capabilities = vim.lsp.protocol.make_client_capabilities()
+      local ok, blink = pcall(require, 'blink.cmp')
+      if ok then capabilities = vim.tbl_deep_extend('force', capabilities, blink.get_lsp_capabilities()) end
 
       -- Enable the following language servers
       --  Feel free to add/remove any LSPs that you want here. They will automatically be installed.
@@ -959,20 +976,8 @@ require('lazy').setup({
     end,
   },
 
-  { -- Highlight, edit, and navigate code
-    'nvim-treesitter/nvim-treesitter',
-    config = function()
-      local filetypes = { 'bash', 'c', 'diff', 'html', 'java', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' }
-      -- Only auto-install parsers if tree-sitter CLI is available
-      if vim.fn.executable 'tree-sitter' == 1 then
-        require('nvim-treesitter').install(filetypes)
-      end
-      vim.api.nvim_create_autocmd('FileType', {
-        pattern = filetypes,
-        callback = function() vim.treesitter.start() end,
-      })
-    end,
-  },
+  -- Note: Neovim 0.11+ has built-in treesitter support
+  -- Treesitter will be enabled automatically for supported filetypes
 
   -- The following comments only work if you have downloaded the kickstart repo, not just copy pasted the
   -- init.lua. If you want these files, they are in the repository, so you can just download them and

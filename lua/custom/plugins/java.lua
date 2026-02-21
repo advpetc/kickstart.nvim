@@ -10,10 +10,21 @@ return {
     },
     config = function()
       -- Resolve Java home for running jdtls (needs JDK 21+)
-      -- Priority: JDTLS_JAVA_HOME > JAVA_HOME > macOS java_home > java on PATH
+      -- Priority: JDTLS_JAVA_HOME > known JDK 21 locations > macOS java_home > JAVA_HOME
       local function resolve_java_home()
-        local home = vim.env.JDTLS_JAVA_HOME or vim.env.JAVA_HOME
+        -- Check explicit JDTLS_JAVA_HOME first
+        local home = vim.env.JDTLS_JAVA_HOME
         if home and home ~= '' then return home end
+
+        -- Check known JDK 21+ locations on Linux
+        local jdk21_paths = {
+          '/export/apps/jdk/JDK-21_0_0-msft',
+          '/usr/lib/jvm/java-21-openjdk',
+          '/usr/lib/jvm/java-21-openjdk-amd64',
+        }
+        for _, path in ipairs(jdk21_paths) do
+          if vim.fn.isdirectory(path) == 1 then return path end
+        end
 
         if vim.fn.has 'mac' == 1 then
           -- Try JDK 21 first, then any version
@@ -23,6 +34,10 @@ return {
           end
           if home ~= '' then return home end
         end
+
+        -- Fall back to JAVA_HOME (may not be JDK 21+)
+        home = vim.env.JAVA_HOME
+        if home and home ~= '' then return home end
 
         local java_bin = vim.fn.exepath 'java'
         if java_bin ~= '' then
@@ -185,7 +200,12 @@ return {
             map('<leader>dx', dap.terminate, 'Terminate')
           end,
 
-          capabilities = require('blink.cmp').get_lsp_capabilities(),
+          capabilities = (function()
+            local caps = vim.lsp.protocol.make_client_capabilities()
+            local ok, blink = pcall(require, 'blink.cmp')
+            if ok then caps = vim.tbl_deep_extend('force', caps, blink.get_lsp_capabilities()) end
+            return caps
+          end)(),
         }
 
         jdtls.start_or_attach(config)
@@ -197,8 +217,10 @@ return {
         callback = start_jdtls,
       })
 
-      -- Start immediately for current buffer
-      start_jdtls()
+      -- Start immediately only if current buffer is a Java file
+      if vim.bo.filetype == 'java' then
+        start_jdtls()
+      end
     end,
   },
 }
