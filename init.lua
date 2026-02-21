@@ -243,6 +243,32 @@ vim.keymap.set('n', '<leader>cl', function()
   vim.notify('Copied: ' .. url, vim.log.levels.INFO)
 end, { desc = '[C]opy GitHub [L]ink' })
 
+vim.keymap.set('n', '<leader>co', function()
+  local file = vim.fn.expand '%:.'
+  local line = vim.fn.line '.'
+  -- Get the commit that last touched this line
+  local blame = vim.fn.system({ 'git', 'blame', '-L', line .. ',' .. line, '--porcelain', file })
+  if vim.v.shell_error ~= 0 then
+    vim.notify('git blame failed', vim.log.levels.WARN)
+    return
+  end
+  local sha = blame:match '^(%x+)'
+  if not sha or sha:match '^0+$' then
+    vim.notify('Line not committed yet', vim.log.levels.WARN)
+    return
+  end
+  -- Ask GitHub for the PR that introduced this commit
+  local pr_url = vim.fn
+    .system({ 'gh', 'api', 'repos/{owner}/{repo}/commits/' .. sha .. '/pulls', '--jq', '.[0].html_url' })
+    :gsub('%s+$', '')
+  if vim.v.shell_error ~= 0 or pr_url == '' or pr_url == 'null' then
+    vim.notify('No PR found for commit ' .. sha:sub(1, 7), vim.log.levels.WARN)
+    return
+  end
+  vim.ui.open(pr_url)
+  vim.notify('Opened PR: ' .. pr_url, vim.log.levels.INFO)
+end, { desc = '[C]opy/[O]pen related PR' })
+
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
 
