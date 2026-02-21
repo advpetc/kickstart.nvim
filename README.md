@@ -175,6 +175,7 @@ Leader key is `<Space>`.
 | `<leader>cp` | Copy relative file path |
 | `<leader>cP` | Copy absolute file path |
 | `<leader>cl` | Copy GitHub permalink |
+| `<leader>co` | Open PR that last changed current line |
 | `\` | Toggle file explorer |
 
 ## LSP Servers
