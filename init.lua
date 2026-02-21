@@ -222,12 +222,22 @@ vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper win
 vim.keymap.set('n', '<leader>cp', function()
   local path = vim.fn.expand '%'
   vim.fn.setreg('+', path)
+  -- Also copy via OSC 52 for remote SSH sessions
+  local ok, osc52 = pcall(require, 'osc52')
+  if ok then
+    osc52.copy(path)
+  end
   print('Copied: ' .. path)
 end, { desc = '[C]opy file [P]ath (relative)' })
 
 vim.keymap.set('n', '<leader>cP', function()
   local path = vim.fn.expand '%:p'
   vim.fn.setreg('+', path)
+  -- Also copy via OSC 52 for remote SSH sessions
+  local ok, osc52 = pcall(require, 'osc52')
+  if ok then
+    osc52.copy(path)
+  end
   print('Copied: ' .. path)
 end, { desc = '[C]opy file [P]ath (absolute)' })
 
@@ -240,6 +250,11 @@ vim.keymap.set('n', '<leader>cl', function()
     return
   end
   vim.fn.setreg('+', url)
+  -- Also copy via OSC 52 for remote SSH sessions
+  local ok, osc52 = pcall(require, 'osc52')
+  if ok then
+    osc52.copy(url)
+  end
   vim.notify('Copied: ' .. url, vim.log.levels.INFO)
 end, { desc = '[C]opy GitHub [L]ink' })
 
