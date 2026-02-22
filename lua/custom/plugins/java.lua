@@ -212,9 +212,11 @@ return {
       end
 
       -- Register autocommand for future Java files
+      -- vim.schedule defers jdtls startup to the next event loop iteration,
+      -- preventing conflicts when files are opened by Neo-tree or other plugins
       vim.api.nvim_create_autocmd('FileType', {
         pattern = 'java',
-        callback = start_jdtls,
+        callback = function() vim.schedule(start_jdtls) end,
       })
 
       -- Start immediately only if current buffer is a Java file
