@@ -963,13 +963,16 @@ require('lazy').setup({
     'nvim-treesitter/nvim-treesitter',
     config = function()
       local filetypes = { 'bash', 'c', 'diff', 'html', 'java', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' }
-      -- Only auto-install parsers if tree-sitter CLI is available
-      if vim.fn.executable 'tree-sitter' == 1 then
-        require('nvim-treesitter').install(filetypes)
-      end
+      -- Auto-install parsers (uses prebuilt binaries when tree-sitter CLI is not available)
+      require('nvim-treesitter').install(filetypes)
       vim.api.nvim_create_autocmd('FileType', {
         pattern = filetypes,
-        callback = function() vim.treesitter.start() end,
+        callback = function(ev)
+          local ft = vim.bo[ev.buf].filetype
+          if not ft or ft == '' then return end
+          -- Start treesitter only when the parser exists; ignore errors (e.g. parser not installed)
+          pcall(vim.treesitter.start, ev.buf, ft)
+        end,
       })
     end,
   },
