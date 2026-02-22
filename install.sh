@@ -501,20 +501,16 @@ setup_jdtls_java_home() {
   # Scan for all JDK installations and find the best one
   log_info "Scanning for Java installations in $jdk_base_dir..."
 
-  while IFS= read -r jdk_dir; do
-    local jdk_path="$jdk_base_dir/$jdk_dir"
-
+  for jdk_path in "$jdk_base_dir"/JDK-*; do
     # Skip if not a directory or no java binary
     [ ! -d "$jdk_path" ] && continue
     [ ! -x "$jdk_path/bin/java" ] && continue
 
     # Extract version number from directory name (e.g., JDK-21_0_0-msft -> 21)
-    local version_major
-    if [[ "$jdk_dir" =~ JDK-([0-9]+) ]]; then
-      version_major="${BASH_REMATCH[1]}"
-    else
-      continue
-    fi
+    local jdk_dir version_major
+    jdk_dir=$(basename "$jdk_path")
+    version_major=$(echo "$jdk_dir" | sed -n 's/^JDK-\([0-9]*\).*/\1/p')
+    [ -z "$version_major" ] && continue
 
     # Prefer Java 21+ (compatible with jdtls), but track highest version found
     if [ "$version_major" -ge 21 ]; then
@@ -528,7 +524,7 @@ setup_jdtls_java_home() {
       selected_jdk="$jdk_path"
       selected_version="$version_major"
     fi
-  done < <(ls "$jdk_base_dir" 2>/dev/null)
+  done
 
   # No JDK found at all
   if [ -z "$selected_jdk" ]; then
